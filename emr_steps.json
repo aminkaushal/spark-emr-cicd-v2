@@ -1,0 +1,14 @@
+[
+  {
+    "Name": "Run Sales Report Job",
+    "ActionOnFailure": "CONTINUE",
+    "HadoopJarStep": {
+      "Jar": "command-runner.jar",
+      "Args": [
+        "spark-submit",
+        "--deploy-mode", "cluster",
+        "s3://your-second-bucket/jobs/sales_report_job.zip"
+      ]
+    }
+  }
+]

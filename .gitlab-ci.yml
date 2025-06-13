@@ -1,0 +1,50 @@
+stages:
+  - test
+  - package
+  - deploy
+  - notify
+
+variables:
+  AWS_REGION: us-west-2
+  S3_BUCKET: your-second-bucket
+  EMR_CLUSTER_ID: j-YYYYYYYY
+
+test:
+  stage: test
+  image: python:3.9
+  script:
+    - pip install -r requirements.txt
+    - pytest tests/
+
+package:
+  stage: package
+  script:
+    - zip sales_report_job.zip src/*
+  artifacts:
+    paths:
+      - sales_report_job.zip
+
+deploy:
+  stage: deploy
+  image: amazon/aws-cli
+  script:
+    - aws s3 cp sales_report_job.zip s3://$S3_BUCKET/jobs/sales_report_job.zip
+    - aws emr add-steps --cluster-id $EMR_CLUSTER_ID --steps file://emr_steps.json
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - script_failure
+
+notify:
+  stage: notify
+  image: python:3.9
+  script:
+    - |
+      if [ "$CI_JOB_STATUS" == "success" ]; then
+        STATUS="✅ Sales job completed successfully"
+      else
+        STATUS="❌ Sales job failed"
+      fi
+      echo -e "Subject: Sales Job Status\n\n$STATUS" | sendmail -v $NOTIFY_EMAIL
+  when: always
